@@ -12,8 +12,7 @@ export class Leaf {
         this.vx = 0;
         this.vy = 0;
         this.rotation = Math.random() * Math.PI * 2;
-        // reduce base rotational jitter by lowering random rotation speed range
-        this.rotationSpeed = (Math.random() - 0.5) * 0.12;
+        this.va = (Math.random() - 0.5) * 0.5;
         this.type = LEAF_TYPES[Math.floor(Math.random() * LEAF_TYPES.length)];
         this.opacity = 0;
         this.collected = false;
@@ -32,21 +31,14 @@ export class Leaf {
         this.x += this.vx * dt;
         this.y += this.vy * dt;
 
-        // Damp rotationSpeed slightly to avoid persistent small oscillations
-        this.rotationSpeed *= 0.985;
-
-        // Reduce small jitter from tiny horizontal velocities by ramping velocity influence.
-        // Only apply the stronger velocity->rotation coupling when |vx| is meaningfully large.
-        const absVx = Math.abs(this.vx);
-        let vxInfluence = 0;
-        if (absVx > 15) {
-            vxInfluence = this.vx * 0.01;
-        } else {
-            // smooth ramp from very small fraction up to threshold
-            vxInfluence = this.vx * 0.001 * (absVx / 15);
-        }
-
-        this.rotation += this.rotationSpeed * dt + vxInfluence;
+        // Improved rotational physics:
+        // Horizontal velocity acts as a torque to build up angular momentum (va).
+        // High damping and hard caps prevent erratic jitter and extreme spin speeds.
+        const torque = this.vx * 0.4; 
+        this.va += torque * dt;
+        this.va *= Math.pow(0.92, dt * 60); // Rotational friction
+        this.va = Math.max(-6, Math.min(6, this.va)); // Cap maximum spin (RPM)
+        this.rotation += this.va * dt;
 
         if (this.x < 20) { this.x = 20; this.vx *= -0.5; }
         if (this.x > cw - 20) { this.x = cw - 20; this.vx *= -0.5; }
