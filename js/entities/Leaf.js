@@ -20,9 +20,13 @@ export class Leaf {
         this.collected = false;
         this.collectTimer = 0;
         this.wobble = Math.random() * Math.PI * 2;
+        this.gx = 0;
+        this.gy = 0;
     }
 
     update(dt, hgx, hgy, cw, ch) {
+        this.gx = hgx;
+        this.gy = hgy;
         this.wobble += dt * 1.5;
         if (this.opacity < 1 && !this.collected) this.opacity = Math.min(1, this.opacity + dt * 2);
         
@@ -59,14 +63,27 @@ export class Leaf {
         const s = this.type.size * 14 * (1 - (this.collectTimer || 0));
         const wobbleScale = 1 + Math.sin(this.wobble) * 0.05;
 
+        // Calculate Tilt based on gradient
+        // We use a cosine-like projection: scale = 1 / sqrt(1 + slope^2)
+        const tiltIntensity = CONFIG.LEAF_TILT_SENSITIVITY;
+        const gx = this.gx * tiltIntensity;
+        const gy = this.gy * tiltIntensity;
+        const slopeMagSq = gx * gx + gy * gy;
+        const tiltScale = 1.0 / Math.sqrt(1.0 + slopeMagSq);
+        const tiltAngle = Math.atan2(gy, gx);
+
         // Draw Shadow
         ctx.save();
         ctx.globalAlpha = this.opacity * 0.3;
-        // Offset shadow based on sun position (sun.z is constant 0.4, so x/y are the drivers)
-        // sun.x is screen right, sun.y is screen up.
         const shadowOffsetX = -sun.x * CONFIG.LEAF_SHADOW_OFFSET_SCALE;
         const shadowOffsetY = sun.y * CONFIG.LEAF_SHADOW_OFFSET_SCALE;
         ctx.translate(this.x + shadowOffsetX, this.y + shadowOffsetY);
+        
+        // Apply Tilt
+        ctx.rotate(tiltAngle);
+        ctx.scale(tiltScale, 1.0);
+        ctx.rotate(-tiltAngle);
+
         ctx.rotate(this.rotation);
         ctx.scale(wobbleScale, 1/wobbleScale);
         ctx.fillStyle = '#000';
@@ -77,6 +94,12 @@ export class Leaf {
         ctx.save();
         ctx.globalAlpha = this.opacity;
         ctx.translate(this.x, this.y);
+
+        // Apply Tilt
+        ctx.rotate(tiltAngle);
+        ctx.scale(tiltScale, 1.0);
+        ctx.rotate(-tiltAngle);
+
         ctx.rotate(this.rotation);
         ctx.scale(wobbleScale, 1/wobbleScale);
 
