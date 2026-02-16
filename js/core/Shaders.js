@@ -57,6 +57,28 @@ uniform float u_time;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
 
+float causticPattern(vec2 uv) {
+  vec2 i = floor(uv);
+  vec2 f = fract(uv);
+  float minDist = 1.0;
+  float minDist2 = 1.0;
+  for (int y = -1; y <= 1; y++) {
+    for (int x = -1; x <= 1; x++) {
+      vec2 neighbor = vec2(float(x), float(y));
+      vec2 point = vec2(hash(i + neighbor), hash(i + neighbor + 37.0));
+      point = 0.5 + 0.5 * sin(u_time * 0.6 + 6.2831 * point);
+      float d = length(neighbor + point - f);
+      if (d < minDist) {
+        minDist2 = minDist;
+        minDist = d;
+      } else if (d < minDist2) {
+        minDist2 = d;
+      }
+    }
+  }
+  return minDist2 - minDist;
+}
+
 void main() {
   float h = texture2D(u_heightMap, v_uv).r;
   float hL = texture2D(u_heightMap, v_uv + vec2(-u_texelSize.x, 0.0)).r;
@@ -68,11 +90,16 @@ void main() {
   vec3 lightDir = normalize(u_sunPos);
   float spec = pow(max(dot(normal, normalize(lightDir + vec3(0,0,1))), 0.0), 64.0);
   
+  // Caustics calculated with fake refraction offset
+  vec2 refractUV = v_uv + normal.xy * 0.04;
+  float c = causticPattern(refractUV * 7.0);
+  float caustics = pow(c, 1.8) * 0.35;
+  
   vec3 deep = vec3(0.01, 0.04, 0.1);
   vec3 surf = vec3(0.05, 0.25, 0.4);
   vec3 water = mix(surf, deep, v_uv.y * 0.8 + 0.2);
   
-  vec3 color = water + spec * vec3(1.0, 0.9, 0.7) + h * 0.05;
+  vec3 color = water + spec * vec3(1.0, 0.9, 0.7) + h * 0.05 + caustics;
   
   // Vignette
   float d = length(v_uv - 0.5);
