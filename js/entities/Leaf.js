@@ -96,9 +96,18 @@ export class Leaf {
         this.drawShape(ctx, s);
         
         // Leaf Texture / Veins (bump map effect)
-        ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-        ctx.lineWidth = 0.5;
+        // Make veins and micro-contrast stronger so texture reads at small sizes
+        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+        ctx.lineWidth = 0.8;
         this.drawVeins(ctx, s);
+
+        // Add a faint inner highlight vein pass for subtle brightness along the central vein
+        ctx.strokeStyle = 'rgba(255,255,220,0.12)';
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(0, -s * 0.6);
+        ctx.lineTo(0, s * 0.2);
+        ctx.stroke();
 
         // Bump-map-like shading: Highlight/Shadow overlays based on sunLocalX/Y
         // We use globalCompositeOperation to add highlights and shadows
@@ -106,14 +115,24 @@ export class Leaf {
         
         // Light side (Screen)
         ctx.globalCompositeOperation = 'soft-light';
-        ctx.fillStyle = `rgba(255, 255, 200, ${Math.max(0, sunLocalX * bumpIntensity)})`;
+        ctx.fillStyle = `rgba(255, 255, 200, ${Math.max(0, Math.min(1, sunLocalX * bumpIntensity))})`;
         this.drawShape(ctx, s);
         
         // Dark side (Multiply)
         ctx.globalCompositeOperation = 'multiply';
-        ctx.fillStyle = `rgba(0, 0, 20, ${Math.max(0, -sunLocalX * bumpIntensity)})`;
+        ctx.fillStyle = `rgba(0, 0, 28, ${Math.max(0, Math.min(1, -sunLocalX * bumpIntensity))})`;
         this.drawShape(ctx, s);
 
+        // Subtle organic mottling overlay to make the leaf surface look textured
+        ctx.globalCompositeOperation = 'overlay';
+        const tex = ctx.createRadialGradient(0, -s * 0.15, s * 0.08, 0, s * 0.35, s);
+        tex.addColorStop(0, `rgba(255,255,255,${0.06 + bumpIntensity * 0.12})`);
+        tex.addColorStop(1, `rgba(0,0,0,${0.05})`);
+        ctx.fillStyle = tex;
+        this.drawShape(ctx, s);
+
+        // Restore composite and state
+        ctx.globalCompositeOperation = 'source-over';
         ctx.restore();
     }
 

@@ -35,5 +35,5 @@ export const CONFIG = {
     // Leaf Visuals
     LEAF_SHADOW_OFFSET_SCALE: 40.0, // how much sun angle affects shadow distance
     LEAF_STEM_LENGTH: 0.4, // length of stem relative to leaf size
-    LEAF_BUMP_INTENSITY: 0.3 // how much sun angle affects shading
+    LEAF_BUMP_INTENSITY: 0.6 // how much sun angle affects shading
 };
