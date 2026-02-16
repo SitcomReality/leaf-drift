@@ -1,22 +1,6 @@
 import { CONFIG } from './Config.js';
 
-// Helper to format numeric constants into GLSL-friendly literals
-const fmt = (val) => {
-  // ensure decimals for GLSL floats
-  if (Number.isInteger(val)) return val.toFixed(1);
-  return String(val);
-};
-
-// Plug-ins of CONFIG values as numeric literals for shader strings
-const CAUSTIC_TIME_FREQ = fmt(CONFIG.CAUSTIC_TIME_FREQ); // speed of caustic animation
-const CAUSTIC_TAU = fmt(CONFIG.CAUSTIC_TAU); // 2*PI
-const CAUSTIC_CELL_SCALE = fmt(CONFIG.CAUSTIC_CELL_SCALE);
-const CAUSTIC_LIGHT_SHIFT = fmt(CONFIG.CAUSTIC_LIGHT_SHIFT);
-const CAUSTIC_NORMAL_SHIFT = fmt(CONFIG.CAUSTIC_NORMAL_SHIFT);
-const CAUSTIC_POWER = fmt(CONFIG.CAUSTIC_POWER);
-const CAUSTIC_INTENSITY = fmt(CONFIG.CAUSTIC_INTENSITY);
-const SPECULAR_POWER = fmt(CONFIG.SPECULAR_POWER);
-const NORMAL_AMPLIFICATION = fmt(CONFIG.NORMAL_AMPLIFICATION);
+const f = (val) => val.toString().includes('.') ? val.toString() : val.toFixed(1);
 
 export const SIM_VERT = `
 attribute vec2 a_position;
@@ -86,7 +70,7 @@ float causticPattern(vec2 uv) {
     for (int x = -1; x <= 1; x++) {
       vec2 neighbor = vec2(float(x), float(y));
       vec2 point = vec2(hash(i + neighbor), hash(i + neighbor + 37.0));
-      point = 0.5 + 0.5 * sin(u_time * ${CAUSTIC_TIME_FREQ} + ${CAUSTIC_TAU} * point);
+      point = 0.5 + 0.5 * sin(u_time * ${f(CONFIG.CAUSTIC_TIME_FREQ)} + ${f(CONFIG.CAUSTIC_TAU)} * point);
       float d = length(neighbor + point - f);
       if (d < minDist) {
         minDist2 = minDist;
@@ -108,31 +92,25 @@ void main() {
   float hD = texture2D(u_heightMap, v_uv + vec2(0.0, -u_texelSize.y)).r;
   float hU = texture2D(u_heightMap, v_uv + vec2(0.0,  u_texelSize.y)).r;
   
-  // Normal calculation: N = (-df/dx, -df/dy, 1)
-  vec3 normal = normalize(vec3(-(hR - hL) * ${NORMAL_AMPLIFICATION}, -(hU - hD) * ${NORMAL_AMPLIFICATION}, 1.0));
+  vec3 normal = normalize(vec3(-(hR - hL) * ${f(CONFIG.NORMAL_AMPLIFICATION)}, -(hU - hD) * ${f(CONFIG.NORMAL_AMPLIFICATION)}, 1.0));
   
-  // Blinn-Phong specular with view vector (0,0,1)
   vec3 viewDir = vec3(0.0, 0.0, 1.0);
   vec3 halfVec = normalize(lightDir + viewDir);
-  float spec = pow(max(dot(normal, halfVec), 0.0), ${SPECULAR_POWER});
+  float spec = pow(max(dot(normal, halfVec), 0.0), ${f(CONFIG.SPECULAR_POWER)});
   
-  // Caustics shift based on light angle and refraction
-  vec2 causticUV = (v_uv - lightDir.xy * ${CAUSTIC_LIGHT_SHIFT}) + normal.xy * ${CAUSTIC_NORMAL_SHIFT};
-  float c = causticPattern(causticUV * ${CAUSTIC_CELL_SCALE});
-  // Invert the pattern: (1.0 - c) makes boundaries bright.
-  float caustics = pow(max(0.0, 1.0 - c), ${CAUSTIC_POWER}) * ${CAUSTIC_INTENSITY};
+  vec2 causticUV = (v_uv - lightDir.xy * ${f(CONFIG.CAUSTIC_LIGHT_SHIFT)}) + normal.xy * ${f(CONFIG.CAUSTIC_NORMAL_SHIFT)};
+  float c = causticPattern(causticUV * ${f(CONFIG.CAUSTIC_CELL_SCALE)});
+  float caustics = pow(max(0.0, 1.0 - c), ${f(CONFIG.CAUSTIC_POWER)}) * ${f(CONFIG.CAUSTIC_INTENSITY)};
   
   vec3 deep = vec3(0.01, 0.04, 0.12);
   vec3 surf = vec3(0.06, 0.28, 0.45);
   vec3 water = mix(surf, deep, v_uv.y * 0.7 + 0.3);
   
-  // Combine components
   vec3 color = water;
-  color += spec * vec3(1.0, 0.95, 0.8) * 1.5; // Brighter specular
-  color += caustics * vec3(0.8, 0.9, 1.0);    // Cool caustic tint
-  color += h * 0.08;                         // Slight height-based luminance
+  color += spec * vec3(1.0, 0.95, 0.8) * 1.5;
+  color += caustics * vec3(0.8, 0.9, 1.0);
+  color += h * 0.08;
   
-  // Vignette
   float d = length(v_uv - 0.5);
   color *= smoothstep(0.9, 0.3, d);
   

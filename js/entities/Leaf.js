@@ -1,7 +1,5 @@
 import { CONFIG } from '../core/Config.js';
 
-import { CONFIG } from '../core/Config.js';
-
 const LEAF_TYPES = [
     { color1: '#c0392b', color2: '#e74c3c', shape: 'maple', size: 1.0 },
     { color1: '#d35400', color2: '#e67e22', shape: 'oak', size: 0.9 },
