@@ -207,9 +207,12 @@ export class Game {
         
         const hf = this.heightField;
         const idx = (r, c) => (r * grid.width + c) * 4;
-        const gradX = (hf[idx(gy, gx+1)] - hf[idx(gy, gx-1)]) * 0.5;
-        const gradY = -(hf[idx(gy+1, gx)] - hf[idx(gy-1, gx)]) * 0.5;
-        return { dx: gradX, dy: gradY };
+        // central differences on the red channel (height)
+        const rawGradX = (hf[idx(gy, gx + 1)] - hf[idx(gy, gx - 1)]) * 0.5;
+        const rawGradY = (hf[idx(gy + 1, gx)] - hf[idx(gy - 1, gx)]) * 0.5;
+        // amplify gradients so leaves feel the waves and flip Y to match screen coordinates
+        const scale = 1500.0;
+        return { dx: rawGradX * scale, dy: -rawGradY * scale };
     }
 
     update(dt) {
