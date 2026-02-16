@@ -62,12 +62,13 @@ uniform float u_time;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
 
 float causticPattern(vec2 uv, float timeOffset) {
-  // Sinusoidal distortion for whispier, gangly appearance
+  float t = (u_time + timeOffset) * ${f(CONFIG.CAUSTIC_TIME_FREQ)};
+  
+  // Continuous sinusoidal distortion to eliminate grid artifacts.
+  // We use the original uv to drive smooth sine waves, avoiding the discrete hash(floor(uv)).
   vec2 distorted = uv;
-  distorted += vec2(
-    sin(uv.y * 7.0 + hash(floor(uv)) * 6.28) * 0.08,
-    sin(uv.x * 7.0 + hash(floor(uv) + 19.0) * 6.28) * 0.08
-  );
+  distorted.x += sin(uv.y * 1.4 + t) * 0.35 + sin(uv.y * 3.1 - t * 0.6) * 0.15;
+  distorted.y += cos(uv.x * 1.4 + t) * 0.35 + cos(uv.x * 3.1 - t * 0.6) * 0.15;
   
   vec2 i = floor(distorted);
   vec2 f = fract(distorted);
@@ -76,9 +77,10 @@ float causticPattern(vec2 uv, float timeOffset) {
   for (int y = -1; y <= 1; y++) {
     for (int x = -1; x <= 1; x++) {
       vec2 neighbor = vec2(float(x), float(y));
-      vec2 point = vec2(hash(i + neighbor), hash(i + neighbor + 37.0));
-      point = 0.5 + 0.5 * sin((u_time + timeOffset) * ${f(CONFIG.CAUSTIC_TIME_FREQ)} + ${f(CONFIG.CAUSTIC_TAU)} * point);
-      float d = length(neighbor + point - f);
+      vec2 p = vec2(hash(i + neighbor), hash(i + neighbor + 37.0));
+      // Standard Voronoi jittering, animated by time
+      p = 0.5 + 0.5 * sin(t + ${f(CONFIG.CAUSTIC_TAU)} * p);
+      float d = length(neighbor + p - f);
       if (d < minDist) {
         minDist2 = minDist;
         minDist = d;
