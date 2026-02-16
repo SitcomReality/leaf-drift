@@ -76,8 +76,7 @@ float causticPattern(vec2 uv) {
       }
     }
   }
-  // Invert the distance difference so the channels between cells are bright
-  return minDist - minDist2;
+  return minDist2 - minDist;
 }
 
 void main() {
@@ -102,7 +101,9 @@ void main() {
   // We subtract lightDir.xy to move the caustics in the direction of the rays
   vec2 causticUV = (v_uv - lightDir.xy * 0.15) + normal.xy * 0.05;
   float c = causticPattern(causticUV * 6.0);
-  float caustics = pow(c, 1.6) * 0.4;
+  // Invert the pattern: (1.0 - c) makes boundaries bright. 
+  // High power (12.0) creates sharp, thin "webbing" channels.
+  float caustics = pow(max(0.0, 1.0 - c), 12.0) * 0.6;
   
   vec3 deep = vec3(0.01, 0.04, 0.12);
   vec3 surf = vec3(0.06, 0.28, 0.45);
