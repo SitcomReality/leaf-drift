@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Leaf Drift</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #020810; font-family: system-ui, -apple-system, sans-serif; }
+        canvas { display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .no-select { user-select: none; -webkit-tap-highlight-color: transparent; }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        .animate-fade-out { animation: fadeOut 1s ease-out forwards; }
+    </style>
+</head>
+<body class="no-select">
+    <!-- WebGL Water Surface -->
+    <canvas id="waterCanvas"></canvas>
+    
+    <!-- 2D Overlay (leaves, UI interactions) -->
+    <canvas id="overlayCanvas" style="touch-action: none; cursor: pointer;"></canvas>
+
+    <!-- Score UI -->
+    <div id="ui-root" class="absolute inset-0 pointer-events-none">
+        <div class="absolute top-0 right-0 p-6 text-right">
+            <div class="text-[10px] uppercase tracking-[0.25em] text-amber-200/40 font-light">Leaves Collected</div>
+            <div id="score" class="text-3xl sm:text-4xl font-extralight text-amber-100/80 tabular-nums tracking-wide">0</div>
+            <div id="combo" class="text-xs sm:text-sm text-amber-300/70 font-light opacity-0 transition-opacity">×0 combo</div>
+        </div>
+
+        <div class="absolute top-0 left-0 p-6">
+            <h1 class="text-sm font-extralight tracking-[0.3em] text-white/20 uppercase">Leaf Drift</h1>
+        </div>
+
+        <div class="absolute bottom-4 left-1/2 -translate-x-1/2">
+            <div id="leaf-count" class="text-[10px] text-amber-200/30 tracking-widest uppercase">0 leaves on water</div>
+        </div>
+
+        <div id="help-overlay" class="absolute inset-0 flex items-center justify-center transition-opacity duration-1000">
+            <div class="text-center space-y-4 max-w-xs px-8">
+                <div class="space-y-3 text-sm text-white/40 font-light leading-relaxed">
+                    <p>Tap the water to create ripples</p>
+                    <p>Drag to push waves & guide leaves</p>
+                    <p>Move leaves to the bottom to collect</p>
+                    <p class="text-xs text-amber-200/30 mt-4">☀ Drag the sun to change the light</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "nipplejs": "https://esm.sh/nipplejs"
+      }
+    }
+    </script>
+    <script type="module" src="js/main.js"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
