@@ -26,8 +26,8 @@ export const CONFIG = {
     LEAF_MAX_SPIN: 6.0, // maximum angular velocity
 
     // Game Mechanics
-    LEAF_SPAWN_INTERVAL_BASE: 2.8, // minimum time between new leaves
-    LEAF_SPAWN_INTERVAL_VAR: 4.0, // random variance added to spawn interval
+    LEAF_SPAWN_INTERVAL_BASE: 1.8, // minimum time between new leaves
+    LEAF_SPAWN_INTERVAL_VAR: 2.5, // random variance added to spawn interval
     COMBO_TIMEOUT: 3.0, // seconds until combo resets
     COLLECTION_ZONE_RATIO: 0.1, // percentage of screen height for collection area
     COLLECTION_ZONE_MIN: 60.0, // minimum height of collection area in pixels

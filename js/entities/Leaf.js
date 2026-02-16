@@ -1,10 +1,10 @@
 import { CONFIG } from '../core/Config.js';
 
 const LEAF_TYPES = [
-    { color1: '#8e2d2d', color2: '#5c1e1e', shape: 'maple', size: 1.0 }, // Crimson/Deep Red
-    { color1: '#b35d1e', color2: '#8c4611', shape: 'oak', size: 0.9 },   // Rust/Burnt Orange
-    { color1: '#d4a017', color2: '#916d0d', shape: 'round', size: 0.8 }, // Golden/Ochre
-    { color1: '#6b8e23', color2: '#4a5d23', shape: 'long', size: 0.85 },  // Olive/Moss
+    { color1: "#a02a1c", color2: "#b94437", shape: 'maple', size: 1.5 },
+    { color1: '#d35400', color2: '#e67e22', shape: 'oak', size: 1.4 },
+    { color1: "#cc840f", color2: "#997d0a", shape: 'round', size: 1.3 },
+    { color1: "#0fa34d", color2: "#0b6f35", shape: 'long', size: 1.4 },
 ];
 
 export class Leaf {
@@ -61,7 +61,7 @@ export class Leaf {
     // Draw only the shadow (used in a separate pass)
     drawShadow(ctx, time, sun) {
         if (this.opacity <= 0) return;
-        const s = this.type.size * 28 * (1 - (this.collectTimer || 0));
+        const s = this.type.size * 14 * (1 - (this.collectTimer || 0));
         const wobbleScale = 1 + Math.sin(this.wobble) * 0.05;
 
         const tiltIntensity = CONFIG.LEAF_TILT_SENSITIVITY;
@@ -92,7 +92,7 @@ export class Leaf {
     // Draw only the leaf body (drawn after all shadows)
     drawBody(ctx, time, sun) {
         if (this.opacity <= 0) return;
-        const s = this.type.size * 28 * (1 - (this.collectTimer || 0));
+        const s = this.type.size * 14 * (1 - (this.collectTimer || 0));
         const wobbleScale = 1 + Math.sin(this.wobble) * 0.05;
 
         const tiltIntensity = CONFIG.LEAF_TILT_SENSITIVITY;

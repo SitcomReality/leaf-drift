@@ -123,8 +123,8 @@ void main() {
   // Blend layers - brightest areas from either layer
   float caustics = max(caustics1, caustics2 * 0.5 + caustics1 * 0.5);
   
-  vec3 deep = vec3(0.02, 0.015, 0.01); // Dark, earthy pond floor
-  vec3 surf = vec3(0.04, 0.08, 0.07);  // Murky, deep forest water surface
+  vec3 deep = vec3(0.01, 0.04, 0.12);
+  vec3 surf = vec3(0.06, 0.28, 0.45);
   vec3 water = mix(surf, deep, v_uv.y * 0.7 + 0.3);
   
   vec3 color = water;
