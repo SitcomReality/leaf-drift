@@ -55,6 +55,15 @@ uniform vec2 u_texelSize;
 uniform vec3 u_sunPos;
 uniform float u_time;
 
+// Caustic / Voronoi tuning constants
+const float CAUSTIC_TIME_FREQ = 0.5;        // multiplier for u_time in the point animation
+const float CAUSTIC_TAU = 6.28318530718;   // 2.0 * PI
+const float CAUSTIC_CELL_SCALE = 6.0;      // scale of the voronoi cells
+const float CAUSTIC_LIGHT_SHIFT = 0.15;    // shift of caustics based on light direction
+const float CAUSTIC_NORMAL_SHIFT = 0.05;   // shift based on surface normal
+const float CAUSTIC_POWER = 12.0;          // exponent to sharpen inverted pattern
+const float CAUSTIC_INTENSITY = 0.6;       // overall caustic brightness multiplier
+
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
 
 float causticPattern(vec2 uv) {
@@ -66,7 +75,7 @@ float causticPattern(vec2 uv) {
     for (int x = -1; x <= 1; x++) {
       vec2 neighbor = vec2(float(x), float(y));
       vec2 point = vec2(hash(i + neighbor), hash(i + neighbor + 37.0));
-      point = 0.5 + 0.5 * sin(u_time * 0.5 + 6.2831 * point);
+      point = 0.5 + 0.5 * sin(u_time * CAUSTIC_TIME_FREQ + CAUSTIC_TAU * point);
       float d = length(neighbor + point - f);
       if (d < minDist) {
         minDist2 = minDist;
@@ -98,12 +107,10 @@ void main() {
   float spec = pow(max(dot(normal, halfVec), 0.0), 80.0);
   
   // Caustics shift based on light angle and refraction
-  // We subtract lightDir.xy to move the caustics in the direction of the rays
-  vec2 causticUV = (v_uv - lightDir.xy * 0.15) + normal.xy * 0.05;
-  float c = causticPattern(causticUV * 6.0);
-  // Invert the pattern: (1.0 - c) makes boundaries bright. 
-  // High power (12.0) creates sharp, thin "webbing" channels.
-  float caustics = pow(max(0.0, 1.0 - c), 12.0) * 0.6;
+  vec2 causticUV = (v_uv - lightDir.xy * CAUSTIC_LIGHT_SHIFT) + normal.xy * CAUSTIC_NORMAL_SHIFT;
+  float c = causticPattern(causticUV * CAUSTIC_CELL_SCALE);
+  // Invert the pattern: (1.0 - c) makes boundaries bright.
+  float caustics = pow(max(0.0, 1.0 - c), CAUSTIC_POWER) * CAUSTIC_INTENSITY;
   
   vec3 deep = vec3(0.01, 0.04, 0.12);
   vec3 surf = vec3(0.06, 0.28, 0.45);
