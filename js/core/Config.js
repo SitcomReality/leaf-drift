@@ -8,9 +8,9 @@ export const CONFIG = {
     CAUSTIC_TAU: 6.2831853, // 2 * PI
     CAUSTIC_CELL_SCALE: 6.0, // frequency/density of the caustic cells
     CAUSTIC_LIGHT_SHIFT: 0.15, // how much the caustics shift with light direction
-    CAUSTIC_NORMAL_SHIFT: 0.05, // how much waves distort the caustic pattern
-    CAUSTIC_POWER: 12.0, // sharpness of the light rays
-    CAUSTIC_INTENSITY: 0.6, // overall brightness of caustics
+    CAUSTIC_NORMAL_SHIFT: 0.2, // how much waves distort the caustic pattern
+    CAUSTIC_POWER: 4, // sharpness of the light rays
+    CAUSTIC_INTENSITY: 0.4, // overall brightness of caustics
 
     // Lighting & Rendering
     SPECULAR_POWER: 80.0, // shininess of the water surface
