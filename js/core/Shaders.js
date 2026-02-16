@@ -61,16 +61,23 @@ uniform float u_time;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
 
-float causticPattern(vec2 uv) {
-  vec2 i = floor(uv);
-  vec2 f = fract(uv);
+float causticPattern(vec2 uv, float timeOffset) {
+  // Sinusoidal distortion for whispier, gangly appearance
+  vec2 distorted = uv;
+  distorted += vec2(
+    sin(uv.y * 7.0 + hash(floor(uv)) * 6.28) * 0.08,
+    sin(uv.x * 7.0 + hash(floor(uv) + 19.0) * 6.28) * 0.08
+  );
+  
+  vec2 i = floor(distorted);
+  vec2 f = fract(distorted);
   float minDist = 1.0;
   float minDist2 = 1.0;
   for (int y = -1; y <= 1; y++) {
     for (int x = -1; x <= 1; x++) {
       vec2 neighbor = vec2(float(x), float(y));
       vec2 point = vec2(hash(i + neighbor), hash(i + neighbor + 37.0));
-      point = 0.5 + 0.5 * sin(u_time * ${f(CONFIG.CAUSTIC_TIME_FREQ)} + ${f(CONFIG.CAUSTIC_TAU)} * point);
+      point = 0.5 + 0.5 * sin((u_time + timeOffset) * ${f(CONFIG.CAUSTIC_TIME_FREQ)} + ${f(CONFIG.CAUSTIC_TAU)} * point);
       float d = length(neighbor + point - f);
       if (d < minDist) {
         minDist2 = minDist;
@@ -99,8 +106,20 @@ void main() {
   float spec = pow(max(dot(normal, halfVec), 0.0), ${f(CONFIG.SPECULAR_POWER)});
   
   vec2 causticUV = (v_uv - lightDir.xy * ${f(CONFIG.CAUSTIC_LIGHT_SHIFT)}) + normal.xy * ${f(CONFIG.CAUSTIC_NORMAL_SHIFT)};
-  float c = causticPattern(causticUV * ${f(CONFIG.CAUSTIC_CELL_SCALE)});
-  float caustics = pow(max(0.0, 1.0 - c), ${f(CONFIG.CAUSTIC_POWER)}) * ${f(CONFIG.CAUSTIC_INTENSITY)};
+  
+  // Use height field to modulate time for reactivity to surface disturbances
+  float heightMod = h * 15.0;
+  
+  // Layer 1: Main caustic layer
+  float c1 = causticPattern(causticUV * ${f(CONFIG.CAUSTIC_CELL_SCALE)}, heightMod);
+  float caustics1 = pow(max(0.0, 1.0 - c1), ${f(CONFIG.CAUSTIC_POWER)}) * ${f(CONFIG.CAUSTIC_INTENSITY)};
+  
+  // Layer 2: Secondary layer with different scale and phase
+  float c2 = causticPattern(causticUV * ${f(CONFIG.CAUSTIC_CELL_SCALE)} * 1.3 + vec2(0.5, 0.3), heightMod * 0.7);
+  float caustics2 = pow(max(0.0, 1.0 - c2), ${f(CONFIG.CAUSTIC_POWER)} * 1.2) * ${f(CONFIG.CAUSTIC_INTENSITY)} * 0.6;
+  
+  // Blend layers - brightest areas from either layer
+  float caustics = max(caustics1, caustics2 * 0.5 + caustics1 * 0.5);
   
   vec3 deep = vec3(0.01, 0.04, 0.12);
   vec3 surf = vec3(0.06, 0.28, 0.45);
