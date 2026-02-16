@@ -1,74 +1,22 @@
-export const SIM_VERT = `
-attribute vec2 a_position;
-varying vec2 v_uv;
-void main() {
-  v_uv = a_position * 0.5 + 0.5;
-  gl_Position = vec4(a_position, 0.0, 1.0);
-}
-`;
-
-export const SIM_FRAG = `
-precision highp float;
-varying vec2 v_uv;
-uniform sampler2D u_current;
-uniform sampler2D u_previous;
-uniform vec2 u_texelSize;
-uniform float u_damping;
-void main() {
-  float c = texture2D(u_current, v_uv).r;
-  float p = texture2D(u_previous, v_uv).r;
-  float l = texture2D(u_current, v_uv + vec2(-u_texelSize.x, 0.0)).r;
-  float r = texture2D(u_current, v_uv + vec2( u_texelSize.x, 0.0)).r;
-  float t = texture2D(u_current, v_uv + vec2(0.0, -u_texelSize.y)).r;
-  float b = texture2D(u_current, v_uv + vec2(0.0,  u_texelSize.y)).r;
-  float next = (2.0 * c - p + 0.24 * (l + r + t + b - 4.0 * c)) * u_damping;
-  gl_FragColor = vec4(next, 0.0, 0.0, 1.0);
-}
-`;
-
-export const DISTURB_FRAG = `
-precision highp float;
-varying vec2 v_uv;
-uniform sampler2D u_current;
-uniform vec2 u_center;
-uniform float u_radius;
-uniform float u_strength;
-uniform vec2 u_direction;
-void main() {
-  float current = texture2D(u_current, v_uv).r;
-  vec2 diff = v_uv - u_center;
-  float dist = length(diff);
-  float splash = u_strength * exp(-dist * dist / (u_radius * u_radius));
-  float dirLen = length(u_direction);
-  if (dirLen > 0.001) {
-    splash *= 0.5 + 0.5 * dot(normalize(diff + 0.0001), u_direction / dirLen);
-  }
-  gl_FragColor = vec4(current + splash, 0.0, 0.0, 1.0);
-}
-`;
-
-export const RENDER_FRAG = `
-precision highp float;
-varying vec2 v_uv;
-uniform sampler2D u_heightMap;
-uniform vec2 u_texelSize;
-uniform vec3 u_sunPos;
-uniform float u_time;
-
 import { CONFIG } from './Config.js';
 
-const f = (val) => val.toString().includes('.') ? val.toString() : val.toFixed(1);
+// Helper to format numeric constants into GLSL-friendly literals
+const fmt = (val) => {
+  // ensure decimals for GLSL floats
+  if (Number.isInteger(val)) return val.toFixed(1);
+  return String(val);
+};
 
-// Caustic / Voronoi tuning constants
-const CAUSTIC_TIME_FREQ = f(CONFIG.CAUSTIC_TIME_FREQ);
-const CAUSTIC_TAU = f(CONFIG.CAUSTIC_TAU);
-const CAUSTIC_CELL_SCALE = f(CONFIG.CAUSTIC_CELL_SCALE);
-const CAUSTIC_LIGHT_SHIFT = f(CONFIG.CAUSTIC_LIGHT_SHIFT);
-const CAUSTIC_NORMAL_SHIFT = f(CONFIG.CAUSTIC_NORMAL_SHIFT);
-const CAUSTIC_POWER = f(CONFIG.CAUSTIC_POWER);
-const CAUSTIC_INTENSITY = f(CONFIG.CAUSTIC_INTENSITY);
-const SPECULAR_POWER = f(CONFIG.SPECULAR_POWER);
-const NORMAL_AMPLIFICATION = f(CONFIG.NORMAL_AMPLIFICATION);
+// Plug-ins of CONFIG values as numeric literals for shader strings
+const CAUSTIC_TIME_FREQ = fmt(CONFIG.CAUSTIC_TIME_FREQ); // speed of caustic animation
+const CAUSTIC_TAU = fmt(CONFIG.CAUSTIC_TAU); // 2*PI
+const CAUSTIC_CELL_SCALE = fmt(CONFIG.CAUSTIC_CELL_SCALE);
+const CAUSTIC_LIGHT_SHIFT = fmt(CONFIG.CAUSTIC_LIGHT_SHIFT);
+const CAUSTIC_NORMAL_SHIFT = fmt(CONFIG.CAUSTIC_NORMAL_SHIFT);
+const CAUSTIC_POWER = fmt(CONFIG.CAUSTIC_POWER);
+const CAUSTIC_INTENSITY = fmt(CONFIG.CAUSTIC_INTENSITY);
+const SPECULAR_POWER = fmt(CONFIG.SPECULAR_POWER);
+const NORMAL_AMPLIFICATION = fmt(CONFIG.NORMAL_AMPLIFICATION);
 
 export const SIM_VERT = `
 attribute vec2 a_position;
