@@ -211,7 +211,7 @@ export class Game {
         const rawGradX = (hf[idx(gy, gx + 1)] - hf[idx(gy, gx - 1)]) * 0.5;
         const rawGradY = (hf[idx(gy + 1, gx)] - hf[idx(gy - 1, gx)]) * 0.5;
         // amplify gradients so leaves feel the waves and flip Y to match screen coordinates
-        const scale = 1500.0;
+        const scale = -100;
         return { dx: rawGradX * scale, dy: -rawGradY * scale };
     }
 
