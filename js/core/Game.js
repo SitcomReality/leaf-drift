@@ -135,9 +135,11 @@ export class Game {
     updateSunDirection() {
         const cx = this.width / 2;
         const cy = this.height / 2;
-        this.sun.x = (this.sun.screenX - cx) / this.width;
-        this.sun.y = -(this.sun.screenY - cy) / this.height;
-        this.sun.z = 0.8;
+        // Increase range from [-0.5, 0.5] to roughly [-1.2, 1.2] for more dramatic angles
+        this.sun.x = (this.sun.screenX - cx) / (this.width * 0.4);
+        this.sun.y = -(this.sun.screenY - cy) / (this.height * 0.4);
+        // Lower Z makes the light more horizontal/directional
+        this.sun.z = 0.4;
         const len = Math.sqrt(this.sun.x**2 + this.sun.y**2 + this.sun.z**2);
         this.sun.x /= len; this.sun.y /= len; this.sun.z /= len;
     }

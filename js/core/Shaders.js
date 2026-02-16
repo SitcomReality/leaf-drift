@@ -66,7 +66,7 @@ float causticPattern(vec2 uv) {
     for (int x = -1; x <= 1; x++) {
       vec2 neighbor = vec2(float(x), float(y));
       vec2 point = vec2(hash(i + neighbor), hash(i + neighbor + 37.0));
-      point = 0.5 + 0.5 * sin(u_time * 0.6 + 6.2831 * point);
+      point = 0.5 + 0.5 * sin(u_time * 0.5 + 6.2831 * point);
       float d = length(neighbor + point - f);
       if (d < minDist) {
         minDist2 = minDist;
@@ -80,30 +80,42 @@ float causticPattern(vec2 uv) {
 }
 
 void main() {
+  vec3 lightDir = normalize(u_sunPos);
+  
   float h = texture2D(u_heightMap, v_uv).r;
   float hL = texture2D(u_heightMap, v_uv + vec2(-u_texelSize.x, 0.0)).r;
   float hR = texture2D(u_heightMap, v_uv + vec2( u_texelSize.x, 0.0)).r;
-  float hT = texture2D(u_heightMap, v_uv + vec2(0.0, -u_texelSize.y)).r;
-  float hB = texture2D(u_heightMap, v_uv + vec2(0.0,  u_texelSize.y)).r;
+  float hD = texture2D(u_heightMap, v_uv + vec2(0.0, -u_texelSize.y)).r;
+  float hU = texture2D(u_heightMap, v_uv + vec2(0.0,  u_texelSize.y)).r;
   
-  vec3 normal = normalize(vec3(-(hR - hL) * 5.0, -(hB - hT) * 5.0, 1.0));
-  vec3 lightDir = normalize(u_sunPos);
-  float spec = pow(max(dot(normal, normalize(lightDir + vec3(0,0,1))), 0.0), 64.0);
+  // Normal calculation: N = (-df/dx, -df/dy, 1)
+  // Steeper multiplier (12.0) makes directional lighting much more visible
+  vec3 normal = normalize(vec3(-(hR - hL) * 12.0, -(hU - hD) * 12.0, 1.0));
   
-  // Caustics calculated with fake refraction offset
-  vec2 refractUV = v_uv + normal.xy * 0.04;
-  float c = causticPattern(refractUV * 7.0);
-  float caustics = pow(c, 1.8) * 0.35;
+  // Blinn-Phong specular with view vector (0,0,1)
+  vec3 viewDir = vec3(0.0, 0.0, 1.0);
+  vec3 halfVec = normalize(lightDir + viewDir);
+  float spec = pow(max(dot(normal, halfVec), 0.0), 80.0);
   
-  vec3 deep = vec3(0.01, 0.04, 0.1);
-  vec3 surf = vec3(0.05, 0.25, 0.4);
-  vec3 water = mix(surf, deep, v_uv.y * 0.8 + 0.2);
+  // Caustics shift based on light angle and refraction
+  // We subtract lightDir.xy to move the caustics in the direction of the rays
+  vec2 causticUV = (v_uv - lightDir.xy * 0.15) + normal.xy * 0.05;
+  float c = causticPattern(causticUV * 6.0);
+  float caustics = pow(c, 1.6) * 0.4;
   
-  vec3 color = water + spec * vec3(1.0, 0.9, 0.7) + h * 0.05 + caustics;
+  vec3 deep = vec3(0.01, 0.04, 0.12);
+  vec3 surf = vec3(0.06, 0.28, 0.45);
+  vec3 water = mix(surf, deep, v_uv.y * 0.7 + 0.3);
+  
+  // Combine components
+  vec3 color = water;
+  color += spec * vec3(1.0, 0.95, 0.8) * 1.5; // Brighter specular
+  color += caustics * vec3(0.8, 0.9, 1.0);    // Cool caustic tint
+  color += h * 0.08;                         // Slight height-based luminance
   
   // Vignette
   float d = length(v_uv - 0.5);
-  color *= smoothstep(0.8, 0.2, d);
+  color *= smoothstep(0.9, 0.3, d);
   
   gl_FragColor = vec4(color, 1.0);
 }
