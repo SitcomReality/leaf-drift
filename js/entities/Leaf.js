@@ -1,3 +1,7 @@
+import { CONFIG } from '../core/Config.js';
+
+import { CONFIG } from '../core/Config.js';
+
 const LEAF_TYPES = [
     { color1: '#c0392b', color2: '#e74c3c', shape: 'maple', size: 1.0 },
     { color1: '#d35400', color2: '#e67e22', shape: 'oak', size: 0.9 },
@@ -24,20 +28,20 @@ export class Leaf {
         this.wobble += dt * 1.5;
         if (this.opacity < 1 && !this.collected) this.opacity = Math.min(1, this.opacity + dt * 2);
         
-        this.vx += hgx * 800 * dt;
-        this.vy += hgy * 800 * dt + 5 * dt; // Slight gravity
-        this.vx *= 0.98;
-        this.vy *= 0.98;
+        this.vx += hgx * CONFIG.LEAF_WAVE_FORCE * dt;
+        this.vy += hgy * CONFIG.LEAF_WAVE_FORCE * dt + CONFIG.LEAF_GRAVITY * dt;
+        this.vx *= CONFIG.LEAF_DRAG;
+        this.vy *= CONFIG.LEAF_DRAG;
         this.x += this.vx * dt;
         this.y += this.vy * dt;
 
         // Improved rotational physics:
         // Horizontal velocity acts as a torque to build up angular momentum (va).
         // High damping and hard caps prevent erratic jitter and extreme spin speeds.
-        const torque = this.vx * 0.4; 
+        const torque = this.vx * CONFIG.LEAF_TORQUE_SCALE; 
         this.va += torque * dt;
-        this.va *= Math.pow(0.92, dt * 60); // Rotational friction
-        this.va = Math.max(-6, Math.min(6, this.va)); // Cap maximum spin (RPM)
+        this.va *= Math.pow(CONFIG.LEAF_ROTATIONAL_FRICTION, dt * 60);
+        this.va = Math.max(-CONFIG.LEAF_MAX_SPIN, Math.min(CONFIG.LEAF_MAX_SPIN, this.va));
         this.rotation += this.va * dt;
 
         if (this.x < 20) { this.x = 20; this.vx *= -0.5; }

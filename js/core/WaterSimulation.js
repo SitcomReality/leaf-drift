@@ -1,4 +1,5 @@
 import * as Shaders from './Shaders.js';
+import { CONFIG } from './Config.js';
 
 export class WaterSimulation {
     constructor(canvas, gridSize) {
@@ -108,7 +109,7 @@ export class WaterSimulation {
         gl.uniform1i(gl.getUniformLocation(p, 'u_previous'), 1);
         
         gl.uniform2f(gl.getUniformLocation(p, 'u_texelSize'), 1/this.gridWidth, 1/this.gridHeight);
-        gl.uniform1f(gl.getUniformLocation(p, 'u_damping'), 0.995);
+        gl.uniform1f(gl.getUniformLocation(p, 'u_damping'), CONFIG.WATER_DAMPING);
         this.drawQuad(p);
         this.currentIndex = (this.currentIndex + 1) % 3;
     }

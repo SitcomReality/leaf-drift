@@ -1,6 +1,7 @@
 import { WaterSimulation } from './WaterSimulation.js';
 import { Leaf } from '../entities/Leaf.js';
 import { Particle } from '../entities/Particle.js';
+import { CONFIG } from './Config.js';
 
 export class Game {
     constructor(waterCanvas, overlayCanvas, onStateChange) {
@@ -9,7 +10,7 @@ export class Game {
         this.ctx = overlayCanvas.getContext('2d');
         this.onStateChange = onStateChange;
 
-        this.waterSim = new WaterSimulation(waterCanvas, 256);
+        this.waterSim = new WaterSimulation(waterCanvas, CONFIG.WATER_GRID_SIZE);
         
         this.leaves = [];
         this.particles = [];
@@ -18,11 +19,11 @@ export class Game {
         this.maxCombo = 0;
         this.comboTimer = 0;
         this.leafSpawnTimer = 0;
-        this.leafSpawnInterval = 2.5;
+        this.leafSpawnInterval = CONFIG.LEAF_SPAWN_INTERVAL_BASE;
         this.heightReadTimer = 0;
         this.heightField = null;
 
-        this.sun = { x: 0.3, y: 0.3, z: 1.0, screenX: 60, screenY: 60, dragging: false };
+        this.sun = { x: 0.3, y: 0.3, z: CONFIG.SUN_Z, screenX: 60, screenY: 60, dragging: false };
         this.mouse = { down: false, lastX: 0, lastY: 0 };
         
         this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -72,7 +73,7 @@ export class Game {
         });
 
         this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        this.collectionZoneHeight = Math.max(60, this.height * 0.1);
+        this.collectionZoneHeight = Math.max(CONFIG.COLLECTION_ZONE_MIN, this.height * CONFIG.COLLECTION_ZONE_RATIO);
     }
 
     bindEvents() {
@@ -178,7 +179,7 @@ export class Game {
         leaf.collect();
         this.score += 10 * (1 + this.combo);
         this.combo++;
-        this.comboTimer = 3;
+        this.comboTimer = CONFIG.COMBO_TIMEOUT;
         if (this.combo > this.maxCombo) this.maxCombo = this.combo;
         
         for (let i = 0; i < 8; i++) {
@@ -242,7 +243,7 @@ export class Game {
         this.leafSpawnTimer += dt;
         if (this.leafSpawnTimer >= this.leafSpawnInterval) {
             this.leafSpawnTimer = 0;
-            this.leafSpawnInterval = 1.8 + Math.random() * 2.5;
+            this.leafSpawnInterval = CONFIG.LEAF_SPAWN_INTERVAL_BASE + Math.random() * CONFIG.LEAF_SPAWN_INTERVAL_VAR;
             this.spawnLeaf();
             this.emitState();
         }

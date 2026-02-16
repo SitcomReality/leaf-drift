@@ -55,14 +55,77 @@ uniform vec2 u_texelSize;
 uniform vec3 u_sunPos;
 uniform float u_time;
 
+import { CONFIG } from './Config.js';
+
+const f = (val) => val.toString().includes('.') ? val.toString() : val.toFixed(1);
+
 // Caustic / Voronoi tuning constants
-const float CAUSTIC_TIME_FREQ = 0.5;        // multiplier for u_time in the point animation
-const float CAUSTIC_TAU = 6.28318530718;   // 2.0 * PI
-const float CAUSTIC_CELL_SCALE = 6.0;      // scale of the voronoi cells
-const float CAUSTIC_LIGHT_SHIFT = 0.15;    // shift of caustics based on light direction
-const float CAUSTIC_NORMAL_SHIFT = 0.05;   // shift based on surface normal
-const float CAUSTIC_POWER = 12.0;          // exponent to sharpen inverted pattern
-const float CAUSTIC_INTENSITY = 0.6;       // overall caustic brightness multiplier
+const CAUSTIC_TIME_FREQ = f(CONFIG.CAUSTIC_TIME_FREQ);
+const CAUSTIC_TAU = f(CONFIG.CAUSTIC_TAU);
+const CAUSTIC_CELL_SCALE = f(CONFIG.CAUSTIC_CELL_SCALE);
+const CAUSTIC_LIGHT_SHIFT = f(CONFIG.CAUSTIC_LIGHT_SHIFT);
+const CAUSTIC_NORMAL_SHIFT = f(CONFIG.CAUSTIC_NORMAL_SHIFT);
+const CAUSTIC_POWER = f(CONFIG.CAUSTIC_POWER);
+const CAUSTIC_INTENSITY = f(CONFIG.CAUSTIC_INTENSITY);
+const SPECULAR_POWER = f(CONFIG.SPECULAR_POWER);
+const NORMAL_AMPLIFICATION = f(CONFIG.NORMAL_AMPLIFICATION);
+
+export const SIM_VERT = `
+attribute vec2 a_position;
+varying vec2 v_uv;
+void main() {
+  v_uv = a_position * 0.5 + 0.5;
+  gl_Position = vec4(a_position, 0.0, 1.0);
+}
+`;
+
+export const SIM_FRAG = `
+precision highp float;
+varying vec2 v_uv;
+uniform sampler2D u_current;
+uniform sampler2D u_previous;
+uniform vec2 u_texelSize;
+uniform float u_damping;
+void main() {
+  float c = texture2D(u_current, v_uv).r;
+  float p = texture2D(u_previous, v_uv).r;
+  float l = texture2D(u_current, v_uv + vec2(-u_texelSize.x, 0.0)).r;
+  float r = texture2D(u_current, v_uv + vec2( u_texelSize.x, 0.0)).r;
+  float t = texture2D(u_current, v_uv + vec2(0.0, -u_texelSize.y)).r;
+  float b = texture2D(u_current, v_uv + vec2(0.0,  u_texelSize.y)).r;
+  float next = (2.0 * c - p + 0.24 * (l + r + t + b - 4.0 * c)) * u_damping;
+  gl_FragColor = vec4(next, 0.0, 0.0, 1.0);
+}
+`;
+
+export const DISTURB_FRAG = `
+precision highp float;
+varying vec2 v_uv;
+uniform sampler2D u_current;
+uniform vec2 u_center;
+uniform float u_radius;
+uniform float u_strength;
+uniform vec2 u_direction;
+void main() {
+  float current = texture2D(u_current, v_uv).r;
+  vec2 diff = v_uv - u_center;
+  float dist = length(diff);
+  float splash = u_strength * exp(-dist * dist / (u_radius * u_radius));
+  float dirLen = length(u_direction);
+  if (dirLen > 0.001) {
+    splash *= 0.5 + 0.5 * dot(normalize(diff + 0.0001), u_direction / dirLen);
+  }
+  gl_FragColor = vec4(current + splash, 0.0, 0.0, 1.0);
+}
+`;
+
+export const RENDER_FRAG = `
+precision highp float;
+varying vec2 v_uv;
+uniform sampler2D u_heightMap;
+uniform vec2 u_texelSize;
+uniform vec3 u_sunPos;
+uniform float u_time;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
 
@@ -75,7 +138,7 @@ float causticPattern(vec2 uv) {
     for (int x = -1; x <= 1; x++) {
       vec2 neighbor = vec2(float(x), float(y));
       vec2 point = vec2(hash(i + neighbor), hash(i + neighbor + 37.0));
-      point = 0.5 + 0.5 * sin(u_time * CAUSTIC_TIME_FREQ + CAUSTIC_TAU * point);
+      point = 0.5 + 0.5 * sin(u_time * ${CAUSTIC_TIME_FREQ} + ${CAUSTIC_TAU} * point);
       float d = length(neighbor + point - f);
       if (d < minDist) {
         minDist2 = minDist;
@@ -98,19 +161,18 @@ void main() {
   float hU = texture2D(u_heightMap, v_uv + vec2(0.0,  u_texelSize.y)).r;
   
   // Normal calculation: N = (-df/dx, -df/dy, 1)
-  // Steeper multiplier (12.0) makes directional lighting much more visible
-  vec3 normal = normalize(vec3(-(hR - hL) * 12.0, -(hU - hD) * 12.0, 1.0));
+  vec3 normal = normalize(vec3(-(hR - hL) * ${NORMAL_AMPLIFICATION}, -(hU - hD) * ${NORMAL_AMPLIFICATION}, 1.0));
   
   // Blinn-Phong specular with view vector (0,0,1)
   vec3 viewDir = vec3(0.0, 0.0, 1.0);
   vec3 halfVec = normalize(lightDir + viewDir);
-  float spec = pow(max(dot(normal, halfVec), 0.0), 80.0);
+  float spec = pow(max(dot(normal, halfVec), 0.0), ${SPECULAR_POWER});
   
   // Caustics shift based on light angle and refraction
-  vec2 causticUV = (v_uv - lightDir.xy * CAUSTIC_LIGHT_SHIFT) + normal.xy * CAUSTIC_NORMAL_SHIFT;
-  float c = causticPattern(causticUV * CAUSTIC_CELL_SCALE);
+  vec2 causticUV = (v_uv - lightDir.xy * ${CAUSTIC_LIGHT_SHIFT}) + normal.xy * ${CAUSTIC_NORMAL_SHIFT};
+  float c = causticPattern(causticUV * ${CAUSTIC_CELL_SCALE});
   // Invert the pattern: (1.0 - c) makes boundaries bright.
-  float caustics = pow(max(0.0, 1.0 - c), CAUSTIC_POWER) * CAUSTIC_INTENSITY;
+  float caustics = pow(max(0.0, 1.0 - c), ${CAUSTIC_POWER}) * ${CAUSTIC_INTENSITY};
   
   vec3 deep = vec3(0.01, 0.04, 0.12);
   vec3 surf = vec3(0.06, 0.28, 0.45);
