@@ -259,7 +259,8 @@ export class Game {
         this.ctx.clearRect(0, 0, this.width, this.height);
         this.drawCollectionZone();
         const time = this.waterSim.getTime();
-        this.leaves.sort((a,b) => a.y - b.y).forEach(l => l.draw(this.ctx, time));
+        // Sort leaves by Y to maintain consistent rendering depth
+        this.leaves.sort((a,b) => a.y - b.y).forEach(l => l.draw(this.ctx, time, this.sun));
         this.particles.forEach(p => p.draw(this.ctx));
         this.drawSun();
     }

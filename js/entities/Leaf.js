@@ -54,22 +54,70 @@ export class Leaf {
     collect() { this.collected = true; }
     isDead() { return this.collected && this.collectTimer > 0.5; }
 
-    draw(ctx, time) {
+    draw(ctx, time, sun) {
         if (this.opacity <= 0) return;
+        const s = this.type.size * 14 * (1 - (this.collectTimer || 0));
+        const wobbleScale = 1 + Math.sin(this.wobble) * 0.05;
+
+        // Draw Shadow
+        ctx.save();
+        ctx.globalAlpha = this.opacity * 0.3;
+        // Offset shadow based on sun position (sun.z is constant 0.4, so x/y are the drivers)
+        // sun.x is screen right, sun.y is screen up.
+        const shadowOffsetX = -sun.x * CONFIG.LEAF_SHADOW_OFFSET_SCALE;
+        const shadowOffsetY = sun.y * CONFIG.LEAF_SHADOW_OFFSET_SCALE;
+        ctx.translate(this.x + shadowOffsetX, this.y + shadowOffsetY);
+        ctx.rotate(this.rotation);
+        ctx.scale(wobbleScale, 1/wobbleScale);
+        ctx.fillStyle = '#000';
+        this.drawShape(ctx, s, true);
+        ctx.restore();
+
+        // Draw Leaf Body
         ctx.save();
         ctx.globalAlpha = this.opacity;
         ctx.translate(this.x, this.y);
         ctx.rotate(this.rotation);
-        
-        const s = this.type.size * 14 * (1 - (this.collectTimer || 0));
-        const w = 1 + Math.sin(this.wobble) * 0.05;
-        ctx.scale(w, 1/w);
+        ctx.scale(wobbleScale, 1/wobbleScale);
 
+        // Calculate simple "bump" shading based on sun angle relative to leaf rotation
+        // We project the sun vector onto the leaf's local space
+        const cosR = Math.cos(-this.rotation);
+        const sinR = Math.sin(-this.rotation);
+        const sunLocalX = sun.x * cosR - (-sun.y) * sinR;
+        const sunLocalY = sun.x * sinR + (-sun.y) * cosR;
+        
+        // Base leaf gradient
         const grad = ctx.createLinearGradient(-s, -s, s, s);
         grad.addColorStop(0, this.type.color1);
         grad.addColorStop(1, this.type.color2);
         ctx.fillStyle = grad;
         
+        this.drawShape(ctx, s);
+        
+        // Leaf Texture / Veins (bump map effect)
+        ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+        ctx.lineWidth = 0.5;
+        this.drawVeins(ctx, s);
+
+        // Bump-map-like shading: Highlight/Shadow overlays based on sunLocalX/Y
+        // We use globalCompositeOperation to add highlights and shadows
+        const bumpIntensity = CONFIG.LEAF_BUMP_INTENSITY;
+        
+        // Light side (Screen)
+        ctx.globalCompositeOperation = 'soft-light';
+        ctx.fillStyle = `rgba(255, 255, 200, ${Math.max(0, sunLocalX * bumpIntensity)})`;
+        this.drawShape(ctx, s);
+        
+        // Dark side (Multiply)
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.fillStyle = `rgba(0, 0, 20, ${Math.max(0, -sunLocalX * bumpIntensity)})`;
+        this.drawShape(ctx, s);
+
+        ctx.restore();
+    }
+
+    drawShape(ctx, s, includeStem = false) {
         ctx.beginPath();
         if (this.type.shape === 'maple') {
             for(let i=0; i<5; i++) {
@@ -77,10 +125,42 @@ export class Leaf {
                 ctx.lineTo(Math.cos(a)*s, Math.sin(a)*s);
                 ctx.lineTo(Math.cos(a+0.6)*s*0.4, Math.sin(a+0.6)*s*0.4);
             }
+        } else if (this.type.shape === 'oak') {
+            for(let i=0; i<8; i++) {
+                const a = (i/8)*Math.PI*2;
+                const r = s * (0.7 + 0.3 * Math.sin(i * 3));
+                ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r);
+            }
         } else {
             ctx.ellipse(0, 0, s*0.6, s, 0, 0, Math.PI*2);
         }
+        ctx.closePath();
         ctx.fill();
-        ctx.restore();
+
+        // Always draw stem if requested or if it's not a shadow
+        if (includeStem || ctx.globalAlpha > 0.4) {
+            ctx.beginPath();
+            ctx.moveTo(0, s * 0.8);
+            ctx.lineTo(0, s * (0.8 + CONFIG.LEAF_STEM_LENGTH));
+            ctx.lineWidth = s * 0.1;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        }
+    }
+
+    drawVeins(ctx, s) {
+        ctx.beginPath();
+        // Central vein
+        ctx.moveTo(0, -s);
+        ctx.lineTo(0, s);
+        // Side veins
+        for(let i=-2; i<=2; i++) {
+            const y = (i/3) * s;
+            ctx.moveTo(0, y);
+            ctx.lineTo(s * 0.4, y - s * 0.2);
+            ctx.moveTo(0, y);
+            ctx.lineTo(-s * 0.4, y - s * 0.2);
+        }
+        ctx.stroke();
     }
 }

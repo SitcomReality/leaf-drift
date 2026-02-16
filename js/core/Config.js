@@ -30,5 +30,10 @@ export const CONFIG = {
     LEAF_SPAWN_INTERVAL_VAR: 2.5, // random variance added to spawn interval
     COMBO_TIMEOUT: 3.0, // seconds until combo resets
     COLLECTION_ZONE_RATIO: 0.1, // percentage of screen height for collection area
-    COLLECTION_ZONE_MIN: 60.0 // minimum height of collection area in pixels
+    COLLECTION_ZONE_MIN: 60.0, // minimum height of collection area in pixels
+
+    // Leaf Visuals
+    LEAF_SHADOW_OFFSET_SCALE: 40.0, // how much sun angle affects shadow distance
+    LEAF_STEM_LENGTH: 0.4, // length of stem relative to leaf size
+    LEAF_BUMP_INTENSITY: 0.3 // how much sun angle affects shading
 };
