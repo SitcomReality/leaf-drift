@@ -259,8 +259,16 @@ export class Game {
         this.ctx.clearRect(0, 0, this.width, this.height);
         this.drawCollectionZone();
         const time = this.waterSim.getTime();
-        // Sort leaves by Y to maintain consistent rendering depth
-        this.leaves.sort((a,b) => a.y - b.y).forEach(l => l.draw(this.ctx, time, this.sun));
+        // Sort leaves by Y to maintain consistent rendering depth.
+        // First draw all shadows, then draw all leaf bodies so shadows always sit behind any leaf.
+        this.leaves.sort((a,b) => a.y - b.y);
+        for (let i = 0; i < this.leaves.length; i++) {
+            this.leaves[i].drawShadow(this.ctx, time, this.sun);
+        }
+        for (let i = 0; i < this.leaves.length; i++) {
+            this.leaves[i].drawBody(this.ctx, time, this.sun);
+        }
+
         this.particles.forEach(p => p.draw(this.ctx));
         this.drawSun();
     }

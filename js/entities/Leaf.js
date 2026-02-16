@@ -58,13 +58,12 @@ export class Leaf {
     collect() { this.collected = true; }
     isDead() { return this.collected && this.collectTimer > 0.5; }
 
-    draw(ctx, time, sun) {
+    // Draw only the shadow (used in a separate pass)
+    drawShadow(ctx, time, sun) {
         if (this.opacity <= 0) return;
         const s = this.type.size * 14 * (1 - (this.collectTimer || 0));
         const wobbleScale = 1 + Math.sin(this.wobble) * 0.05;
 
-        // Calculate Tilt based on gradient
-        // We use a cosine-like projection: scale = 1 / sqrt(1 + slope^2)
         const tiltIntensity = CONFIG.LEAF_TILT_SENSITIVITY;
         const gx = this.gx * tiltIntensity;
         const gy = this.gy * tiltIntensity;
@@ -72,7 +71,6 @@ export class Leaf {
         const tiltScale = 1.0 / Math.sqrt(1.0 + slopeMagSq);
         const tiltAngle = Math.atan2(gy, gx);
 
-        // Draw Shadow
         ctx.save();
         ctx.globalAlpha = this.opacity * 0.3;
         const shadowOffsetX = -sun.x * CONFIG.LEAF_SHADOW_OFFSET_SCALE;
@@ -89,8 +87,21 @@ export class Leaf {
         ctx.fillStyle = '#000';
         this.drawShape(ctx, s, true);
         ctx.restore();
+    }
 
-        // Draw Leaf Body
+    // Draw only the leaf body (drawn after all shadows)
+    drawBody(ctx, time, sun) {
+        if (this.opacity <= 0) return;
+        const s = this.type.size * 14 * (1 - (this.collectTimer || 0));
+        const wobbleScale = 1 + Math.sin(this.wobble) * 0.05;
+
+        const tiltIntensity = CONFIG.LEAF_TILT_SENSITIVITY;
+        const gx = this.gx * tiltIntensity;
+        const gy = this.gy * tiltIntensity;
+        const slopeMagSq = gx * gx + gy * gy;
+        const tiltScale = 1.0 / Math.sqrt(1.0 + slopeMagSq);
+        const tiltAngle = Math.atan2(gy, gx);
+
         ctx.save();
         ctx.globalAlpha = this.opacity;
         ctx.translate(this.x, this.y);
@@ -104,7 +115,6 @@ export class Leaf {
         ctx.scale(wobbleScale, 1/wobbleScale);
 
         // Calculate simple "bump" shading based on sun angle relative to leaf rotation
-        // We project the sun vector onto the leaf's local space
         const cosR = Math.cos(-this.rotation);
         const sinR = Math.sin(-this.rotation);
         const sunLocalX = sun.x * cosR - (-sun.y) * sinR;
@@ -118,13 +128,12 @@ export class Leaf {
         
         this.drawShape(ctx, s);
         
-        // Leaf Texture / Veins (bump map effect)
-        // Make veins and micro-contrast stronger so texture reads at small sizes
+        // Leaf Texture / Veins
         ctx.strokeStyle = 'rgba(0,0,0,0.25)';
         ctx.lineWidth = 0.8;
         this.drawVeins(ctx, s);
 
-        // Add a faint inner highlight vein pass for subtle brightness along the central vein
+        // Inner highlight vein
         ctx.strokeStyle = 'rgba(255,255,220,0.12)';
         ctx.lineWidth = 0.6;
         ctx.beginPath();
@@ -132,21 +141,18 @@ export class Leaf {
         ctx.lineTo(0, s * 0.2);
         ctx.stroke();
 
-        // Bump-map-like shading: Highlight/Shadow overlays based on sunLocalX/Y
-        // We use globalCompositeOperation to add highlights and shadows
+        // Bump-map-like shading
         const bumpIntensity = CONFIG.LEAF_BUMP_INTENSITY;
         
-        // Light side (Screen)
         ctx.globalCompositeOperation = 'soft-light';
         ctx.fillStyle = `rgba(255, 255, 200, ${Math.max(0, Math.min(1, sunLocalX * bumpIntensity))})`;
         this.drawShape(ctx, s);
         
-        // Dark side (Multiply)
         ctx.globalCompositeOperation = 'multiply';
         ctx.fillStyle = `rgba(0, 0, 28, ${Math.max(0, Math.min(1, -sunLocalX * bumpIntensity))})`;
         this.drawShape(ctx, s);
 
-        // Subtle organic mottling overlay to make the leaf surface look textured
+        // Organic mottling overlay
         ctx.globalCompositeOperation = 'overlay';
         const tex = ctx.createRadialGradient(0, -s * 0.15, s * 0.08, 0, s * 0.35, s);
         tex.addColorStop(0, `rgba(255,255,255,${0.06 + bumpIntensity * 0.12})`);
@@ -154,9 +160,14 @@ export class Leaf {
         ctx.fillStyle = tex;
         this.drawShape(ctx, s);
 
-        // Restore composite and state
         ctx.globalCompositeOperation = 'source-over';
         ctx.restore();
+    }
+
+    // Backwards-compatible single call draw for callers that expect it
+    draw(ctx, time, sun) {
+        this.drawShadow(ctx, time, sun);
+        this.drawBody(ctx, time, sun);
     }
 
     drawShape(ctx, s, includeStem = false) {
