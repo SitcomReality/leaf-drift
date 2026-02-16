@@ -76,7 +76,8 @@ float causticPattern(vec2 uv) {
       }
     }
   }
-  return minDist2 - minDist;
+  // Invert the distance difference so the channels between cells are bright
+  return minDist - minDist2;
 }
 
 void main() {
